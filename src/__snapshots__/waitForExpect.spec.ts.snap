@@ -17,3 +17,12 @@ Expected value to equal:
 Received:
   300"
 `;
+
+exports[`it should try best to report proper error message when the waited execution takes a long time to finish 1`] = `
+"expect(received).toBeGreaterThan(expected)
+
+Expected value to be greater than:
+  1
+Received:
+  1"
+`;

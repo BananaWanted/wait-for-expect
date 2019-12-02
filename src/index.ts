@@ -22,13 +22,32 @@ const waitForExpect = function waitForExpect(
 
   // eslint-disable-next-line no-param-reassign
   if (interval < 1) interval = 1;
-  const maxTries = Math.ceil(timeout / interval);
   let tries = 0;
+
+  const isDateMocked = (Date as any)._isMockFunction || (Date.now as any)._isMockFunction;
+  const maxTries = Math.ceil(timeout / interval);
+  const startTime = isDateMocked ? 0 : Date.now()
   return new Promise((resolve, reject) => {
     const rejectOrRerun = (error: Error) => {
-      if (tries > maxTries) {
-        reject(error);
-        return;
+      if (isDateMocked) {
+        // We can't use the fancy way to predict the execution time when Date or Date.now is mocked.
+        // So fallback to traditional route
+        if (tries > maxTries) {
+          reject(error);
+          return;
+        }
+      } else {
+          // so far:
+          //  the total execution duration = Date.now() - startTime
+          //  execution times = tries
+          //  wait for interval times = tries - 1
+          // so avg time runExpectation takes = ((Date.now() - startTime) - interval * (tries - 1)) / tries
+          // expected next execution time = avg runExpectation time + interval = below
+          const expectedNextExecutionTime = (Date.now() - startTime + interval) / tries
+          if (expectedNextExecutionTime > (timeout - Date.now() + startTime)) {
+            reject(error);
+            return;
+          }
       }
       // eslint-disable-next-line no-use-before-define
       setTimeout(runExpectation, interval);

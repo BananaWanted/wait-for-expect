@@ -39,6 +39,30 @@ test(
 );
 
 test(
+  "it should try best to report proper error message when the waited execution takes a long time to finish",
+  async done => {
+    function sleep(delay: number) {
+      var start = new Date().getTime();
+      while (new Date().getTime() < start + delay);
+    }
+    let counter = 0;
+    try {
+      await waitForExpect(() => {
+        sleep(3000);
+        // This case should never try the second run since it "predict" the second try would timeout in jest
+        // Since the counter is increased, the second try will either pass (which would fail the snapshot match)
+        // or timeout by jest
+        counter += 1;
+        expect(counter).toBeGreaterThan(1);
+      })
+    } catch(e) {
+      expect(e.message).toMatchSnapshot();
+      done();
+    }
+  }
+)
+
+test(
   "it fails when the change didn't happen fast enough, based on the waitForExpect timeout",
   async done => {
     let numberToChangeTooLate = 300;
@@ -77,7 +101,7 @@ test("it reruns the expectation every x ms, as provided with the second argument
     );
   } catch (e) {
     // initial run + reruns
-    const expectedTimesToRun = 1 + Math.floor(timeout / interval);
+    const expectedTimesToRun = Math.floor(timeout / interval);
     expect(timesRun).toEqual(expectedTimesToRun);
     expect(timesRun).toBeInRange({
       min: expectedTimesToRun - 1,
@@ -98,7 +122,7 @@ test("it reruns the expectation every x ms, as provided by the default timeout a
     throw Error("waitForExpect should have thrown");
   } catch (e) {
     // initial run + reruns
-    const expectedTimesToRun = 1 + Math.floor(timeout / interval);
+    const expectedTimesToRun = Math.floor(timeout / interval);
     expect(mockExpectation).toHaveBeenCalledTimes(expectedTimesToRun);
   }
 });
